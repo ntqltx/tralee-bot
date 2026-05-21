@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -103,5 +104,11 @@ func main() {
 	log.Println("Bot started...")
 	go handleUpdates()
 
-	select {}
+	checkListings()
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		checkListings()
+	}
 }
