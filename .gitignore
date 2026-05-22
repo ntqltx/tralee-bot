@@ -1,3 +1,4 @@
 .env
 /tralee-bot
+/data
 *.json

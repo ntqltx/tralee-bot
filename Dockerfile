@@ -19,6 +19,5 @@ COPY --from=builder /out/tralee-bot /app/tralee-bot
 
 USER app
 ENV SEEN_PATH=/data/seen.json
-VOLUME ["/data"]
 
 ENTRYPOINT ["/app/tralee-bot"]

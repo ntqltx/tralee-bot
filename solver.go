@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -35,6 +36,13 @@ type flareResponse struct {
 
 var flareClient = &http.Client{Timeout: 90 * time.Second}
 
+func flareURL() string {
+	if u := os.Getenv("FLARESOLVERR_URL"); u != "" {
+		return u
+	}
+	return FLARE_DEFAULT_URL
+}
+
 func postSolver(target string) ([]byte, error) {
 	payload, err := json.Marshal(flareRequest{
 		Cmd:        "request.get",
@@ -46,7 +54,7 @@ func postSolver(target string) ([]byte, error) {
 	}
 
 	resp, err := flareClient.Post(
-		FLARE_DEFAULT_URL,
+		flareURL(),
 		"application/json",
 		bytes.NewBuffer(payload),
 	)
