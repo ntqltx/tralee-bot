@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+seen.json
+tralee-bot
+*.md
+LICENSE
+Dockerfile
+.dockerignore
+.idea
+.vscode
