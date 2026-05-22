@@ -27,7 +27,7 @@ type UpdateResponse struct {
 	Result []Update `json:"result"`
 }
 
-var subscribers = map[int64]bool{}
+var subscribers = loadSubscribers()
 
 func loadToken() string {
 	env.Load(".env")
@@ -107,6 +107,8 @@ func handleUpdates() {
 				continue
 			}
 			subscribers[chatID] = true
+			saveSubscribers(subscribers)
+
 			log.Printf("New subscriber: %d", chatID)
 			sendMessage(chatID, "You're subscribed to Tralee apartment alerts!", "")
 		}

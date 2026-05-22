@@ -6,51 +6,62 @@ import (
 	"os"
 )
 
-const DEFAULT_PATH string = "seen.json"
+type ids = map[int64]bool
 
-func seenPath() string {
-	if p := os.Getenv("SEEN_PATH"); p != "" {
+const (
+	DEFAULT_SEEN_PATH = "seen.json"
+	DEFAULT_SUBS_PATH = "subscribers.json"
+)
+
+func pathOr(envKey, dflt string) string {
+	if p := os.Getenv(envKey); p != "" {
 		return p
 	}
-	return DEFAULT_PATH
+	return dflt
 }
 
-func loadSeen() map[int64]bool {
-	seen := map[int64]bool{}
-	path := seenPath()
+func seenPath() string { return pathOr("SEEN_PATH", DEFAULT_SEEN_PATH) }
+func subsPath() string { return pathOr("SUBS_PATH", DEFAULT_SUBS_PATH) }
+
+func loadIDs(path string) ids {
+	out := ids{}
 	data, err := os.ReadFile(path)
 
 	if err != nil {
 		if !os.IsNotExist(err) {
 			log.Printf("read %s: %v", path, err)
 		}
-		return seen
+		return out
 	}
 
 	var ids []int64
 	if err := json.Unmarshal(data, &ids); err != nil {
 		log.Printf("parse %s: %v", path, err)
-		return seen
+		return out
 	}
 	for _, id := range ids {
-		seen[id] = true
+		out[id] = true
 	}
-	return seen
+	return out
 }
 
-func saveSeen(seen map[int64]bool) {
-	ids := make([]int64, 0, len(seen))
-	for id := range seen {
+func saveIDs(path string, m ids) {
+	ids := make([]int64, 0, len(m))
+	for id := range m {
 		ids = append(ids, id)
 	}
 
 	data, err := json.Marshal(ids)
 	if err != nil {
-		log.Printf("marshal seen: %v", err)
+		log.Printf("marshal %s: %v", path, err)
 		return
 	}
-	path := seenPath()
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		log.Printf("write %s: %v", path, err)
 	}
 }
+
+func loadSeen() ids         { return loadIDs(seenPath()) }
+func saveSeen(m ids)        { saveIDs(seenPath(), m) }
+func loadSubscribers() ids  { return loadIDs(subsPath()) }
+func saveSubscribers(m ids) { saveIDs(subsPath(), m) }
