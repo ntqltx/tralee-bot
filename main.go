@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	CHECK_INTERVAL  = 15 * time.Minute
+	CHECK_INTERVAL  = 45 * time.Minute
 	STARTUP_RETRIES = 12
 	STARTUP_BACKOFF = 5 * time.Second
 )
