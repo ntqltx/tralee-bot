@@ -110,7 +110,7 @@ func handleUpdates() {
 			saveSubscribers(subscribers)
 
 			log.Printf("New subscriber: %d", chatID)
-			sendMessage(chatID, "You're subscribed to Tralee apartment alerts!", "")
+			sendMessage(chatID, "✅ You've subscribed to Tralee apartment alerts!", "")
 		}
 	}
 }

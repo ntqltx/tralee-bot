@@ -13,7 +13,7 @@ func formatListing(l Listing) string {
 	}
 
 	return fmt.Sprintf(
-		"🔔<b>New Listing!</b>\n\n%s\n%s%s\n\n<a href=\"%s\">View on Daft.ie</a>",
+		"🔔 <b>New Listing!</b>\n\n%s\n%s%s\n\n<a href=\"%s\">View on Daft.ie</a>",
 		html.EscapeString(l.Title),
 		html.EscapeString(l.Price),
 		meta,
