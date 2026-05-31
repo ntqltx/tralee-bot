@@ -12,7 +12,7 @@ import (
 	"sync"
 )
 
-const maxWebhookBodyBytes = 1 << 20 // 1 MiB is plenty for an RSS batch.
+const maxWebhookBodyBytes = 1 << 20
 
 var processMu sync.Mutex
 
@@ -40,6 +40,7 @@ func newListingsWebhook(w http.ResponseWriter, r *http.Request) {
 	var payload []webhookListing
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
+
 	if err := decoder.Decode(&payload); err != nil {
 		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON payload: %v", err))
 		return
@@ -79,6 +80,7 @@ func normalizeWebhookListings(payload []webhookListing) ([]Listing, error) {
 		if item.URL == "" {
 			return nil, fmt.Errorf("listing at index %d has empty url", i)
 		}
+
 		parsed, err := url.ParseRequestURI(item.URL)
 		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 			return nil, fmt.Errorf("listing at index %d has invalid url", i)
@@ -96,11 +98,9 @@ func normalizeWebhookListings(payload []webhookListing) ([]Listing, error) {
 func processWebhookListings(listings []Listing) int {
 	processMu.Lock()
 
-	// Production dedupe lives here. This repo currently persists seen listing IDs
-	// to JSON on Railway's /data volume; this can be swapped for Postgres/Redis
-	// without changing the webhook contract.
 	seen := loadSeen()
 	fresh := make([]Listing, 0, len(listings))
+
 	for _, l := range listings {
 		if seen[l.ID] {
 			continue
@@ -130,6 +130,7 @@ func writeJSONError(w http.ResponseWriter, status int, message string) {
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
+
 	if err := json.NewEncoder(w).Encode(body); err != nil {
 		log.Printf("write response: %v", err)
 	}
