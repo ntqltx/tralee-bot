@@ -2,3 +2,4 @@
 /tralee-bot
 /data
 *.json
+__pycache__

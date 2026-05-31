@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"os"
 	"time"
 )
 
@@ -75,10 +77,11 @@ func checkListings() {
 	processListings(listings)
 }
 
-func main() {
-	log.Println("Bot started...")
-	go handleUpdates()
+func legacyPollingEnabled() bool {
+	return os.Getenv("ENABLE_LEGACY_POLLING") == "true"
+}
 
+func runLegacyPolling() {
 	if len(loadSeen()) == 0 {
 		seedSeen()
 	} else {
@@ -90,5 +93,35 @@ func main() {
 
 	for range ticker.C {
 		checkListings()
+	}
+}
+
+func port() string {
+	if p := os.Getenv("PORT"); p != "" {
+		return p
+	}
+	return "8080"
+}
+
+func main() {
+	log.Println("Bot started...")
+	go handleUpdates()
+
+	if legacyPollingEnabled() {
+		log.Println("Legacy Daft page polling enabled")
+		go runLegacyPolling()
+	} else {
+		log.Println("Legacy Daft page polling disabled; waiting for webhook pushes")
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", healthz)
+	mux.HandleFunc("/webhook/new-listings", newListingsWebhook)
+
+	addr := ":" + port()
+	log.Printf("HTTP server listening on %s", addr)
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatal(err)
 	}
 }
