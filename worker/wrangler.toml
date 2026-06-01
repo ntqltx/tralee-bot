@@ -1,0 +1,19 @@
+# Cloudflare Worker config for the Telegram webhook receiver.
+#
+# One-time setup:
+#   cd worker
+#   wrangler kv:namespace create tralee_bot
+#   # copy the printed id into the [[kv_namespaces]] block below
+#   wrangler secret put BOT_TOKEN
+#   wrangler deploy
+#
+# After deploying, point Telegram at the worker:
+#   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://<worker-name>.<account>.workers.dev/"
+
+name = "tralee-bot-webhook"
+main = "src/index.js"
+compatibility_date = "2026-05-01"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_NAMESPACE_ID"

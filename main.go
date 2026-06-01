@@ -2,13 +2,10 @@ package main
 
 import (
 	"log"
-	"net/http"
-	"os"
 	"time"
 )
 
 const (
-	CHECK_INTERVAL  = 45 * time.Minute
 	STARTUP_RETRIES = 12
 	STARTUP_BACKOFF = 5 * time.Second
 )
@@ -25,103 +22,54 @@ func fetchWithRetry(label string) ([]Listing, bool) {
 	return nil, false
 }
 
-func checkWithRetry() {
-	listings, ok := fetchWithRetry("startup")
-	if !ok {
-		log.Printf("giving up on startup fetch, will retry at next tick")
-		return
-	}
-	processListings(listings)
-}
+func main() {
+	log.Println("Single-shot run started")
 
-func seedSeen() {
-	log.Println("First run — seeding seen listings (no broadcast)")
-	listings, ok := fetchWithRetry("seed")
-	if !ok {
-		log.Println("seed failed, next tick may broadcast existing listings")
-		return
+	subscribers, err := kvListSubscribers()
+	if err != nil {
+		log.Fatalf("load subscribers: %v", err)
 	}
-	seen := ids{}
-	for _, l := range listings {
-		seen[l.ID] = true
-	}
-	saveSeen(seen)
-	log.Printf("Seeded %d listings", len(seen))
-}
+	log.Printf("Loaded %d subscriber(s)", len(subscribers))
 
-func processListings(listings []Listing) {
-	seen := loadSeen()
-	fresh := 0
+	seen, err := kvGetSeen()
+	if err != nil {
+		log.Fatalf("load seen: %v", err)
+	}
+	log.Printf("Loaded %d seen listing(s)", len(seen))
+
+	firstRun := len(seen) == 0
+
+	listings, ok := fetchWithRetry("fetch")
+	if !ok {
+		log.Fatal("giving up: flaresolverr never returned a successful response")
+	}
+
+	fresh := make([]Listing, 0, len(listings))
 	for _, l := range listings {
 		if seen[l.ID] {
 			continue
 		}
 		seen[l.ID] = true
-		fresh++
-		broadcast(formatListing(l))
+		fresh = append(fresh, l)
 	}
-	if fresh > 0 {
-		saveSeen(seen)
-		log.Printf("Broadcast %d new listing(s)", fresh)
+
+	if firstRun {
+		log.Printf("First run — seeding %d listing(s) without broadcasting", len(fresh))
 	} else {
-		log.Printf("No new listings (%d total)", len(listings))
+		log.Printf("Broadcasting %d new listing(s) to %d subscriber(s)", len(fresh), len(subscribers))
+		for _, l := range fresh {
+			broadcast(subscribers, formatListing(l))
+		}
 	}
-}
 
-func checkListings() {
-	listings, err := fetchListings()
-	if err != nil {
-		log.Printf("fetch listings: %v", err)
-		return
-	}
-	processListings(listings)
-}
-
-func legacyPollingEnabled() bool {
-	return os.Getenv("ENABLE_LEGACY_POLLING") == "true"
-}
-
-func runLegacyPolling() {
-	if len(loadSeen()) == 0 {
-		seedSeen()
+	if len(fresh) > 0 {
+		if err := kvPutSeen(seen); err != nil {
+			log.Fatalf("save seen: %v", err)
+		}
+		log.Printf("Persisted %d seen listing ID(s) to KV", len(seen))
 	} else {
-		checkWithRetry()
+		log.Println("No new listings, KV unchanged")
 	}
 
-	ticker := time.NewTicker(CHECK_INTERVAL)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		checkListings()
-	}
-}
-
-func port() string {
-	if p := os.Getenv("PORT"); p != "" {
-		return p
-	}
-	return "8080"
-}
-
-func main() {
-	log.Println("Bot started...")
-	go handleUpdates()
-
-	if legacyPollingEnabled() {
-		log.Println("Legacy Daft page polling enabled")
-		go runLegacyPolling()
-	} else {
-		log.Println("Legacy Daft page polling disabled; waiting for webhook pushes")
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", healthz)
-	mux.HandleFunc("/webhook/new-listings", newListingsWebhook)
-
-	addr := ":" + port()
-	log.Printf("HTTP server listening on %s", addr)
-
-	if err := http.ListenAndServe(addr, mux); err != nil {
-		log.Fatal(err)
-	}
+	log.Println("Done")
 }
