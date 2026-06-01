@@ -10,7 +10,7 @@
 # After deploying, point Telegram at the worker:
 #   curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://<worker-name>.<account>.workers.dev/"
 
-name = "tralee-bot-webhook"
+name = "tralee-bot"
 main = "src/index.js"
 compatibility_date = "2026-05-01"
 
