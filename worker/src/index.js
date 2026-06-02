@@ -21,12 +21,27 @@ export default {
       return new Response("ok", { status: 200 });
     }
 
+    const key = `sub:${chatId}`;
+
     if (text === "/start") {
-      await env.KV.put(`sub:${chatId}`, String(chatId));
-      await reply(env, chatId, "✅ You've subscribed to Tralee apartment alerts! Send /stop to unsubscribe.");
-    } else if (text === "/stop") {
-      await env.KV.delete(`sub:${chatId}`);
-      await reply(env, chatId, "❌ Unsubscribed. Send /start to resubscribe.");
+      const existing = await env.KV.get(key);
+      if (existing) {
+        await reply(env, chatId, "ℹ️ Already subscribed to Tralee apartment alerts. Send /stop to unsubscribe.");
+      } 
+      else {
+        await env.KV.put(key, String(chatId));
+        await reply(env, chatId, "✅ You've subscribed to Tralee apartment alerts! Send /stop to unsubscribe.");
+      }
+    } 
+    else if (text === "/stop") {
+      const existing = await env.KV.get(key);
+      if (!existing) {
+        await reply(env, chatId, "ℹ️ You're not subscribed. Send /start to subscribe.");
+      } 
+      else {
+        await env.KV.delete(key);
+        await reply(env, chatId, "❌ Unsubscribed. Send /start to resubscribe.");
+      }
     }
 
     return new Response("ok", { status: 200 });
